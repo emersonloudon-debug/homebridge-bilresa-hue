@@ -1,7 +1,15 @@
 # homebridge-bilresa-hue
 
-Use an **IKEA BILRESA scroll wheel** (E2490) to dim, recolour and switch
-**Philips Hue** lights, one scroll click at a time.
+Use an **IKEA BILRESA scroll wheel** (E2490) to control **Philips Hue**
+lights. Each of the remote's three channels does a different job:
+
+| Channel (LED) | Scroll forward | Scroll back     | Click  |
+|---------------|----------------|-----------------|--------|
+| 1             | brighter       | dimmer          | on/off |
+| 2             | next colour    | previous colour | white  |
+| 3             | next scene     | previous scene  | on/off |
+
+Double-click is left free for anything you like.
 
 ## Why this exists
 
@@ -44,17 +52,19 @@ BILRESA click ──Thread──▶ Apple Home hub ──automation──▶ "Be
 
 2. **Configure it.** In the Homebridge UI, open Plugins → BILRESA Scroll
    Wheel for Hue → Settings. Add a target for each room you want to control,
-   using the room's name exactly as it appears in the Hue app. Or add this to
-   `config.json`:
+   using the room's name exactly as it appears in the Hue app. Leave
+   "Switches to create" empty to get every switch the table above needs. Or
+   add this to `config.json`:
    ```json
    {
      "platform": "BilresaHue",
      "targets": [
-       { "name": "Bedroom", "controls": ["brighter", "dimmer", "toggle"] },
-       { "name": "Living Room", "controls": ["warmer", "cooler", "next_colour", "previous_colour"] }
+       { "name": "Bedroom" }
      ]
    }
    ```
+   That creates eight switches: *Bedroom Brighter*, *Dimmer*, *On-Off*,
+   *Next Colour*, *Previous Colour*, *White*, *Next Scene* and *Previous Scene*.
 
 3. **Pair with the Hue Bridge.** Restart Homebridge and watch the log. When
    it says *"Press the round link button on your Hue Bridge"*, press it. The
@@ -64,19 +74,28 @@ BILRESA click ──Thread──▶ Apple Home hub ──automation──▶ "Be
    scan the Matter code on the back of the remote.
 
 5. **Create the automations.** Open the BILRESA in the Home app. Each of its
-   three channels (the dots on the front) shows up as three buttons: clockwise
-   scroll, anticlockwise scroll and press. For each one, choose
-   *Single Press* and select a switch from this plugin. For example:
+   three channels shows up as three buttons, in this order: clockwise
+   scroll, anticlockwise scroll, then click. For each one, choose
+   *Single Press* and turn on a switch from this plugin:
 
-   | Channel | Button                   | Turn on                |
-   |---------|--------------------------|------------------------|
-   | 1       | clockwise scroll         | Bedroom Brighter       |
-   | 1       | anticlockwise scroll     | Bedroom Dimmer         |
-   | 1       | press                    | Bedroom On-Off         |
-   | 2       | clockwise scroll         | Living Room Warmer     |
-   | 2       | anticlockwise scroll     | Living Room Cooler     |
-   | 3       | clockwise scroll         | Living Room Next Colour |
-   | 3       | anticlockwise scroll     | Living Room Previous Colour |
+   | Button | Channel | Action               | Turn on                |
+   |--------|---------|----------------------|------------------------|
+   | 1      | 1       | scroll forward       | Bedroom Brighter       |
+   | 2      | 1       | scroll back          | Bedroom Dimmer         |
+   | 3      | 1       | click                | Bedroom On-Off         |
+   | 4      | 2       | scroll forward       | Bedroom Next Colour    |
+   | 5      | 2       | scroll back          | Bedroom Previous Colour |
+   | 6      | 2       | click                | Bedroom White          |
+   | 7      | 3       | scroll forward       | Bedroom Next Scene     |
+   | 8      | 3       | scroll back          | Bedroom Previous Scene |
+   | 9      | 3       | click                | Bedroom On-Off         |
+
+   Scroll buttons may also report a *Double Press* when you scroll quickly.
+   If fast scrolling seems to skip steps, set Double Press on buttons 1, 2,
+   4, 5, 7 and 8 to the same switch as their Single Press.
+
+   Click buttons (3, 6, 9) also have *Double Press* and *Long Press*. These
+   are free: point them at any Apple Home scene or accessory.
 
    If the Home app doesn't list all nine buttons, use a third-party HomeKit
    app such as *Eve* or *Controller for HomeKit*. They show every button
@@ -88,13 +107,23 @@ BILRESA click ──Thread──▶ Apple Home hub ──automation──▶ "Be
 |-------------------|----------------------------------------------------|
 | `brighter`        | +10 % brightness (turns the lights on if off)      |
 | `dimmer`          | −10 % brightness (stops at the lowest level, never off) |
-| `warmer`          | warmer white                                       |
-| `cooler`          | cooler white                                       |
+| `toggle`          | on ↔ off                                           |
 | `next_colour`     | next colour: red → orange → yellow → green → cyan → blue → purple → pink |
 | `previous_colour` | previous colour                                    |
-| `toggle`          | on ↔ off                                           |
+| `white`           | back to warm white                                 |
+| `next_scene`      | the room's next Hue scene, in alphabetical order   |
+| `previous_scene`  | the room's previous Hue scene                      |
+| `warmer`          | warmer white (not in the default set)              |
+| `cooler`          | cooler white (not in the default set)              |
+
+Scenes are the ones you've saved for that room or zone in the Hue app. The
+plugin starts from whichever scene is showing now and wraps round at the
+end of the list.
 
 Targets can be a Hue `room` (default), a `zone`, a single `light`, or `all`.
+Single lights and `all` have no scenes, so they get no scene switches.
+To pick your own set of switches, list them in `controls`, e.g.
+`"controls": ["brighter", "dimmer", "warmer", "cooler"]`.
 
 ## Settings
 

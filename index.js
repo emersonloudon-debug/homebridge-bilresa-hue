@@ -3,11 +3,17 @@
 const fs = require('fs');
 const path = require('path');
 const { HueClient } = require('./lib/hue');
-const { TargetController, CONTROLS } = require('./lib/controller');
+const { TargetController, CONTROLS, SCENE_CONTROLS } = require('./lib/controller');
 
 const PLUGIN_NAME = 'homebridge-bilresa-hue';
 const PLATFORM_NAME = 'BilresaHue';
-const DEFAULT_CONTROLS = ['brighter', 'dimmer', 'toggle'];
+// One switch per thing the BILRESA's three channels do by default:
+// channel 1 brightness, channel 2 colour, channel 3 scenes.
+const DEFAULT_CONTROLS = [
+  'brighter', 'dimmer', 'toggle',
+  'next_colour', 'previous_colour', 'white',
+  'next_scene', 'previous_scene',
+];
 const PAIR_TIMEOUT_MS = 120000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -90,11 +96,19 @@ class BilresaHuePlatform {
         this.log.error('Skipping a target with no name');
         continue;
       }
-      const controls = (target.controls && target.controls.length ? target.controls : DEFAULT_CONTROLS)
+      const hasScenes = type === 'room' || type === 'zone';
+      const custom = target.controls && target.controls.length;
+      const controls = (custom ? target.controls : DEFAULT_CONTROLS)
         .filter((c) => {
-          if (CONTROLS[c]) return true;
-          this.log.error(`${name}: ignoring unknown control "${c}"`);
-          return false;
+          if (!CONTROLS[c]) {
+            this.log.error(`${name}: ignoring unknown control "${c}"`);
+            return false;
+          }
+          if (SCENE_CONTROLS.includes(c) && !hasScenes) {
+            if (custom) this.log.error(`${name}: scene controls need a room or zone, skipping "${c}"`);
+            return false;
+          }
+          return true;
         });
 
       const uuid = hap.uuid.generate(`${PLUGIN_NAME}:${type}:${name.toLowerCase()}`);
@@ -110,7 +124,10 @@ class BilresaHuePlatform {
         step: this.config.brightnessStep,
         mirekStep: this.config.colourTempStep,
         minIntervalMs: this.config.minIntervalMs,
-        hue: { v2: async (...args) => (await this.connect()).v2(...args) },
+        hue: {
+          v2: async (...args) => (await this.connect()).v2(...args),
+          scenesFor: async (groupId) => (await this.connect()).scenesFor(groupId),
+        },
         resolve: async () => (await this.connect()).resolveTarget(type, name),
       });
 

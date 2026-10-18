@@ -14,6 +14,12 @@ function startFakeBridge() {
     zone: [{ id: 'z1', metadata: { name: 'Desk' }, services: [{ rid: 'g-desk', rtype: 'grouped_light' }] }],
     light: [{ id: 'l1', metadata: { name: 'Lamp' } }],
     bridge_home: [{ id: 'h1', services: [{ rid: 'g-home', rtype: 'grouped_light' }] }],
+    scene: [
+      { id: 's-relax', metadata: { name: 'Relax' }, group: { rid: 'r1', rtype: 'room' }, status: { active: 'static' } },
+      { id: 's-bright', metadata: { name: 'Bright' }, group: { rid: 'r1', rtype: 'room' }, status: { active: 'inactive' } },
+      { id: 's-read', metadata: { name: 'Read' }, group: { rid: 'r1', rtype: 'room' }, status: { active: 'inactive' } },
+      { id: 's-desk', metadata: { name: 'Focus' }, group: { rid: 'z1', rtype: 'zone' }, status: { active: 'inactive' } },
+    ],
   };
 
   const server = http.createServer((req, res) => {
@@ -43,6 +49,7 @@ function startFakeBridge() {
         return send({ errors: [], data: [{ id, on: { on: Boolean(state.groupOn[id]) } }] });
       }
       if (type === 'light' && id) return send({ errors: [], data: [{ id, on: { on: true } }] });
+      if (type === 'scene' && id) return send({ errors: [], data: [{ rid: id, rtype: 'scene' }] });
       return send({ errors: [], data: data[type] || [] });
     });
   });

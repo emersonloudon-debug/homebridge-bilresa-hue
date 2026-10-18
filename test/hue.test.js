@@ -10,11 +10,18 @@ test('resolves rooms, zones, lights and all lights by name', async (t) => {
   t.after(() => bridge.close());
   const hue = new HueClient({ host: bridge.host, appKey: 'test-key', protocol: 'http' });
 
-  assert.strictEqual(await hue.resolveTarget('room', ' bedroom '), '/resource/grouped_light/g-bedroom');
-  assert.strictEqual(await hue.resolveTarget('zone', 'Desk'), '/resource/grouped_light/g-desk');
-  assert.strictEqual(await hue.resolveTarget('light', 'Lamp'), '/resource/light/l1');
-  assert.strictEqual(await hue.resolveTarget('all'), '/resource/grouped_light/g-home');
+  assert.deepStrictEqual(await hue.resolveTarget('room', ' bedroom '), { path: '/resource/grouped_light/g-bedroom', groupId: 'r1' });
+  assert.deepStrictEqual(await hue.resolveTarget('zone', 'Desk'), { path: '/resource/grouped_light/g-desk', groupId: 'z1' });
+  assert.deepStrictEqual(await hue.resolveTarget('light', 'Lamp'), { path: '/resource/light/l1', groupId: null });
+  assert.deepStrictEqual(await hue.resolveTarget('all'), { path: '/resource/grouped_light/g-home', groupId: null });
   await assert.rejects(hue.resolveTarget('room', 'Kitchen'), /No room called "Kitchen".*Found: Bedroom/);
+});
+
+test('lists a room\'s scenes in alphabetical order', async (t) => {
+  const bridge = await startFakeBridge();
+  t.after(() => bridge.close());
+  const hue = new HueClient({ host: bridge.host, appKey: 'test-key', protocol: 'http' });
+  assert.deepStrictEqual((await hue.scenesFor('r1')).map((s) => s.metadata.name), ['Bright', 'Read', 'Relax']);
 });
 
 test('reports bridge errors', async (t) => {

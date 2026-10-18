@@ -53,20 +53,38 @@ test('creates momentary switches that drive the Hue Bridge', async (t) => {
   const names = bedroom.services
     .filter((s) => s.UUID === api.hap.Service.Switch.UUID)
     .map((s) => s.getCharacteristic(Characteristic.ConfiguredName).value);
-  assert.deepStrictEqual(names, ['Bedroom Brighter', 'Bedroom Dimmer', 'Bedroom On-Off']);
+  assert.deepStrictEqual(names, [
+    'Bedroom Brighter', 'Bedroom Dimmer', 'Bedroom On-Off',
+    'Bedroom Next Colour', 'Bedroom Previous Colour', 'Bedroom White',
+    'Bedroom Next Scene', 'Bedroom Previous Scene',
+  ]);
 
   const brighter = switchFor(bedroom, api, 'brighter').getCharacteristic(Characteristic.On);
   await brighter.handleSetRequest(true);
   await brighter.handleSetRequest(true);
   await switchFor(everything, api, 'toggle').getCharacteristic(Characteristic.On).handleSetRequest(true);
   await settle();
+  // Relax is showing, so the next scene alphabetically wraps round to Bright.
+  await switchFor(bedroom, api, 'next_scene').getCharacteristic(Characteristic.On).handleSetRequest(true);
+  await settle();
 
   const puts = bridge.state.requests.filter((r) => r.method === 'PUT');
   assert.deepStrictEqual(puts.map((r) => [r.url, r.body]), [
     ['/clip/v2/resource/grouped_light/g-bedroom', { on: { on: true }, dimming_delta: { action: 'up', brightness_delta: 20 } }],
     ['/clip/v2/resource/grouped_light/g-home', { on: { on: false } }],
+    ['/clip/v2/resource/scene/s-bright', { recall: { action: 'active' } }],
   ]);
   assert.strictEqual(brighter.value, false, 'switch flips back off');
+});
+
+test('lights and "all lights" get no scene switches by default', async (t) => {
+  const bridge = await startFakeBridge();
+  t.after(() => bridge.close());
+  const { api, registered } = boot({ targets: [{ name: 'Lamp', type: 'light' }] }, bridge);
+  const subtypes = registered[0].services
+    .filter((s) => s.UUID === api.hap.Service.Switch.UUID)
+    .map((s) => s.subtype);
+  assert.deepStrictEqual(subtypes, ['brighter', 'dimmer', 'toggle', 'next_colour', 'previous_colour', 'white']);
 });
 
 test('cleans up accessories and switches that were removed from the config', async (t) => {

@@ -2,7 +2,7 @@
   "pluginAlias": "BilresaHue",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Adds step-by-step Hue controls (Brighter, Dimmer, Warmer, Next Colour, ...) as HomeKit switches, so an IKEA BILRESA scroll wheel can drive Hue lights through Home automations. The first time it starts, press the link button on your Hue Bridge when the log asks.",
+  "headerDisplay": "Adds step-by-step Hue controls (Brighter, Dimmer, Next Colour, Next Scene, ...) as HomeKit switches, so an IKEA BILRESA scroll wheel can drive Hue lights through Home automations. The first time it starts, press the link button on your Hue Bridge when the log asks.",
   "schema": {
     "type": "object",
     "properties": {
@@ -70,17 +70,20 @@
               "title": "Switches to create",
               "type": "array",
               "uniqueItems": true,
-              "default": ["brighter", "dimmer", "toggle"],
+              "description": "Leave empty for the full BILRESA layout: brightness, colour and scene switches.",
               "items": {
                 "type": "string",
                 "oneOf": [
                   { "title": "Brighter", "enum": ["brighter"] },
                   { "title": "Dimmer", "enum": ["dimmer"] },
-                  { "title": "Warmer", "enum": ["warmer"] },
-                  { "title": "Cooler", "enum": ["cooler"] },
+                  { "title": "On/Off toggle", "enum": ["toggle"] },
                   { "title": "Next colour", "enum": ["next_colour"] },
                   { "title": "Previous colour", "enum": ["previous_colour"] },
-                  { "title": "On/Off toggle", "enum": ["toggle"] }
+                  { "title": "Back to white", "enum": ["white"] },
+                  { "title": "Warmer white", "enum": ["warmer"] },
+                  { "title": "Cooler white", "enum": ["cooler"] },
+                  { "title": "Next scene (rooms and zones)", "enum": ["next_scene"] },
+                  { "title": "Previous scene (rooms and zones)", "enum": ["previous_scene"] }
                 ]
               }
             }

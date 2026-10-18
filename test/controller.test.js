@@ -6,20 +6,30 @@ const { TargetController } = require('../lib/controller');
 
 const silentLog = { debug() {}, info() {}, warn() {}, error() {} };
 
+const SCENES = [
+  { id: 'a', metadata: { name: 'A' }, status: { active: 'inactive' } },
+  { id: 'b', metadata: { name: 'B' }, status: { active: 'inactive' } },
+  { id: 'c', metadata: { name: 'C' }, status: { active: 'inactive' } },
+];
+
 function makeController(opts = {}) {
   const calls = [];
   const hue = {
     isOn: opts.isOn ?? true,
+    scenes: opts.scenes ?? SCENES,
     async v2(method, path, body) {
       calls.push({ method, path, body });
       return [{ on: { on: this.isOn } }];
+    },
+    async scenesFor() {
+      return this.scenes;
     },
   };
   const controller = new TargetController({
     name: 'Bedroom',
     log: silentLog,
     hue,
-    resolve: async () => '/resource/grouped_light/g1',
+    resolve: async () => ({ path: '/resource/grouped_light/g1', groupId: 'r1' }),
     minIntervalMs: 50,
     ...opts,
   });
@@ -112,7 +122,7 @@ test('a failed lookup is retried on the next press', async () => {
     resolve: async () => {
       attempts++;
       if (attempts === 1) throw new Error('bridge offline');
-      return '/resource/grouped_light/g1';
+      return { path: '/resource/grouped_light/g1', groupId: 'r1' };
     },
   });
   controller.press('brighter');
@@ -121,4 +131,55 @@ test('a failed lookup is retried on the next press', async () => {
   controller.press('brighter');
   await settle();
   assert.strictEqual(puts(calls).length, 1);
+});
+
+test('white goes back to warm white and cancels a pending colour', async () => {
+  const { controller, calls } = makeController();
+  controller.press('next_colour');
+  controller.press('white');
+  await settle();
+  assert.deepStrictEqual(puts(calls), [{ color_temperature: { mirek: 370 }, on: { on: true } }]);
+});
+
+const recalled = (calls) => calls
+  .filter((c) => c.method === 'PUT' && c.path.startsWith('/resource/scene/'))
+  .map((c) => c.path.split('/').pop());
+
+test('scene controls step through scenes from the one showing now, wrapping round', async () => {
+  const scenes = SCENES.map((s) => ({ ...s, status: { active: s.id === 'b' ? 'static' : 'inactive' } }));
+  const { controller, calls } = makeController({ scenes });
+  controller.press('next_scene');
+  await settle();
+  controller.press('next_scene');
+  await settle();
+  controller.press('previous_scene');
+  controller.press('previous_scene');
+  controller.press('previous_scene');
+  await settle();
+  assert.deepStrictEqual(recalled(calls), ['c', 'a', 'a']);
+  assert.deepStrictEqual(calls.find((c) => c.path === '/resource/scene/c').body, { recall: { action: 'active' } });
+});
+
+test('with no scene showing, next starts at the first and previous at the last', async () => {
+  const first = makeController();
+  first.controller.press('next_scene');
+  await settle();
+  const last = makeController();
+  last.controller.press('previous_scene');
+  await settle();
+  assert.deepStrictEqual([...recalled(first.calls), ...recalled(last.calls)], ['a', 'c']);
+});
+
+test('scene controls explain what is wrong instead of failing silently', async () => {
+  const errors = [];
+  const log = { ...silentLog, error: (m) => errors.push(m) };
+  const lamp = makeController({ log, resolve: async () => ({ path: '/resource/light/l1', groupId: null }) });
+  lamp.controller.press('next_scene');
+  const empty = makeController({ log, scenes: [] });
+  empty.controller.press('next_scene');
+  await settle();
+  assert.deepStrictEqual(errors.sort(), [
+    'Bedroom: No scenes saved for this room in the Hue app',
+    'Bedroom: Scenes only work for a room or zone',
+  ]);
 });

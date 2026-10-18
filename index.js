@@ -169,9 +169,11 @@ class BilresaHuePlatform {
       .onGet(() => false)
       .onSet((value) => {
         if (!value) return;
+        this.log.info(`Pressed: ${label}`);
         controller.press(control);
-        // Momentary: flip back off so the next press is a fresh "on".
-        setTimeout(() => service.updateCharacteristic(Characteristic.On, false), 300);
+        // Momentary: flip back off quickly. While it still reads "on", the
+        // Home hub can skip the next "turn on" from a fast scroll.
+        setTimeout(() => service.updateCharacteristic(Characteristic.On, false), 50);
       });
   }
 }

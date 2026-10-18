@@ -42,13 +42,12 @@ BILRESA click ──Thread──▶ Apple Home hub ──automation──▶ "Be
 
 ## Setup
 
-1. **Install the plugin.** Copy this folder onto your Homebridge machine,
-   open the Homebridge UI terminal (⋮ menu → Terminal) and run:
+1. **Install the plugin.** In the Homebridge web page open the ⋮ menu →
+   Terminal and run:
    ```
-   cd /path/to/homebridge-bilresa-hue
-   sudo npm install -g .
+   npm install github:emersonloudon-debug/homebridge-bilresa-hue
    ```
-   Restart Homebridge.
+   Restart Homebridge. Run the same command again later to update.
 
 2. **Configure it.** In the Homebridge UI, open Plugins → BILRESA Scroll
    Wheel for Hue → Settings. Add a target for each room you want to control,

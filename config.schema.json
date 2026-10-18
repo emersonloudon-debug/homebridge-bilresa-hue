@@ -1,0 +1,92 @@
+{
+  "pluginAlias": "BilresaHue",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Adds step-by-step Hue controls (Brighter, Dimmer, Warmer, Next Colour, ...) as HomeKit switches, so an IKEA BILRESA scroll wheel can drive Hue lights through Home automations. The first time it starts, press the link button on your Hue Bridge when the log asks.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "BILRESA Hue"
+      },
+      "bridgeIp": {
+        "title": "Hue Bridge IP address",
+        "type": "string",
+        "format": "ipv4",
+        "description": "Leave blank to find the bridge automatically."
+      },
+      "appKey": {
+        "title": "Hue app key",
+        "type": "string",
+        "description": "Leave blank. The plugin creates and saves one when you press the bridge's link button."
+      },
+      "brightnessStep": {
+        "title": "Brightness change per scroll step (%)",
+        "type": "integer",
+        "default": 10,
+        "minimum": 1,
+        "maximum": 100
+      },
+      "colourTempStep": {
+        "title": "Warmth change per scroll step (mirek)",
+        "type": "integer",
+        "default": 50,
+        "minimum": 5,
+        "maximum": 347
+      },
+      "minIntervalMs": {
+        "title": "Minimum time between commands to the bridge (ms)",
+        "type": "integer",
+        "default": 400,
+        "minimum": 100,
+        "description": "Fast scrolling is combined into one bigger step. Raise this if the log shows rate limit errors."
+      },
+      "targets": {
+        "title": "Lights to control",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Name in the Hue app",
+              "type": "string",
+              "required": true,
+              "description": "Exactly as it appears in the Hue app, e.g. Bedroom."
+            },
+            "type": {
+              "title": "Type",
+              "type": "string",
+              "default": "room",
+              "oneOf": [
+                { "title": "Room", "enum": ["room"] },
+                { "title": "Zone", "enum": ["zone"] },
+                { "title": "Single light", "enum": ["light"] },
+                { "title": "All lights", "enum": ["all"] }
+              ]
+            },
+            "controls": {
+              "title": "Switches to create",
+              "type": "array",
+              "uniqueItems": true,
+              "default": ["brighter", "dimmer", "toggle"],
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  { "title": "Brighter", "enum": ["brighter"] },
+                  { "title": "Dimmer", "enum": ["dimmer"] },
+                  { "title": "Warmer", "enum": ["warmer"] },
+                  { "title": "Cooler", "enum": ["cooler"] },
+                  { "title": "Next colour", "enum": ["next_colour"] },
+                  { "title": "Previous colour", "enum": ["previous_colour"] },
+                  { "title": "On/Off toggle", "enum": ["toggle"] }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "homebridge-bilresa-hue",
+  "displayName": "BILRESA Scroll Wheel for Hue",
+  "version": "0.1.0",
+  "description": "Lets the IKEA BILRESA scroll wheel (or any HomeKit button) dim, recolour and toggle Philips Hue lights step by step.",
+  "main": "index.js",
+  "license": "MIT",
+  "keywords": [
+    "homebridge-plugin",
+    "hue",
+    "ikea",
+    "bilresa",
+    "scroll wheel",
+    "dimmer"
+  ],
+  "engines": {
+    "node": "^18.20.0 || ^20.15.0 || ^22",
+    "homebridge": "^1.8.0 || ^2.0.0-beta.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "config.schema.json",
+    "README.md"
+  ],
+  "devDependencies": {
+    "homebridge": "^1.8.5"
+  }
+}

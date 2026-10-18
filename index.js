@@ -18,8 +18,8 @@ const PAIR_TIMEOUT_MS = 120000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Exposes one HomeKit accessory per Hue room/zone/light, holding a
-// momentary switch for each control ("Living Room Brighter", ...). A Home
+// Exposes a momentary HomeKit switch for each control on each Hue
+// room/zone/light ("Living Room Brighter", ...). A Home
 // automation on a BILRESA scroll step turns a switch on, the plugin sends
 // the matching step to the Hue Bridge, and the switch flips back off.
 class BilresaHuePlatform {
@@ -111,13 +111,6 @@ class BilresaHuePlatform {
           return true;
         });
 
-      const uuid = hap.uuid.generate(`${PLUGIN_NAME}:${type}:${name.toLowerCase()}`);
-      used.add(uuid);
-
-      let accessory = this.cached.get(uuid);
-      const isNew = !accessory;
-      if (isNew) accessory = new this.api.platformAccessory(name, uuid);
-
       const controller = new TargetController({
         name,
         log: this.log,
@@ -131,12 +124,24 @@ class BilresaHuePlatform {
         resolve: async () => (await this.connect()).resolveTarget(type, name),
       });
 
-      this.configure(accessory, controller, name, controls);
+      // One accessory per switch: the Home app reliably shows accessory
+      // names, but often labels extra switches in one accessory "Switch 2".
+      for (const control of controls) {
+        const label = `${name} ${CONTROLS[control]}`;
+        const uuid = hap.uuid.generate(`${PLUGIN_NAME}:${type}:${name.toLowerCase()}:${control}`);
+        used.add(uuid);
 
-      if (isNew) {
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-      } else {
-        this.api.updatePlatformAccessories([accessory]);
+        let accessory = this.cached.get(uuid);
+        const isNew = !accessory;
+        if (isNew) accessory = new this.api.platformAccessory(label, uuid);
+
+        this.configure(accessory, controller, label, control);
+
+        if (isNew) {
+          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        } else {
+          this.api.updatePlatformAccessories([accessory]);
+        }
       }
     }
 
@@ -149,37 +154,25 @@ class BilresaHuePlatform {
     }
   }
 
-  configure(accessory, controller, name, controls) {
+  configure(accessory, controller, label, control) {
     const { Service, Characteristic } = this.api.hap;
 
     accessory.getService(Service.AccessoryInformation)
       .setCharacteristic(Characteristic.Manufacturer, 'homebridge-bilresa-hue')
-      .setCharacteristic(Characteristic.Model, 'Hue Step Controls')
+      .setCharacteristic(Characteristic.Model, CONTROLS[control])
       .setCharacteristic(Characteristic.SerialNumber, accessory.UUID.slice(0, 8));
 
-    for (const service of accessory.services.filter((s) => s.UUID === Service.Switch.UUID)) {
-      if (!controls.includes(service.subtype)) accessory.removeService(service);
-    }
+    const service = accessory.getService(Service.Switch) || accessory.addService(Service.Switch, label);
+    service.setCharacteristic(Characteristic.Name, label);
 
-    for (const control of controls) {
-      const label = `${name} ${CONTROLS[control]}`;
-      const service = accessory.getServiceById(Service.Switch, control)
-        || accessory.addService(Service.Switch, label, control);
-      service.setCharacteristic(Characteristic.Name, label);
-      if (!service.testCharacteristic(Characteristic.ConfiguredName)) {
-        service.addOptionalCharacteristic(Characteristic.ConfiguredName);
-        service.setCharacteristic(Characteristic.ConfiguredName, label);
-      }
-
-      service.getCharacteristic(Characteristic.On)
-        .onGet(() => false)
-        .onSet((value) => {
-          if (!value) return;
-          controller.press(control);
-          // Momentary: flip back off so the next press is a fresh "on".
-          setTimeout(() => service.updateCharacteristic(Characteristic.On, false), 300);
-        });
-    }
+    service.getCharacteristic(Characteristic.On)
+      .onGet(() => false)
+      .onSet((value) => {
+        if (!value) return;
+        controller.press(control);
+        // Momentary: flip back off so the next press is a fresh "on".
+        setTimeout(() => service.updateCharacteristic(Characteristic.On, false), 300);
+      });
   }
 }
 
